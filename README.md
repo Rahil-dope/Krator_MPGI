@@ -5,7 +5,10 @@ A modern web platform for managing a college tech fest with event registrations,
 ## Tech Stack
 
 - **Frontend**: Next.js 16 (App Router), Tailwind CSS v4, Lucide Icons
-- **Backend**: Firebase (Auth, Firestore, Storage)
+- **Backend API**: Next.js Server Actions & API Routes
+- **Database**: PostgreSQL (Neon recommended) via Prisma ORM v6
+- **Authentication**: NextAuth.js v5 (Google OAuth)
+- **Storage**: Cloudinary (for payment proofs and QR codes)
 - **Hosting**: Vercel
 
 ## Quick Start
@@ -17,37 +20,66 @@ cd KRATOS
 npm install
 ```
 
-### 2. Firebase Setup
+### 2. Infrastructure Setup
 
-1. Go to [Firebase Console](https://console.firebase.google.com)
-2. Create a new project
-3. Enable **Authentication** → Sign-in method → **Google**
-4. Enable **Cloud Firestore** → Create database (production mode)
-5. Enable **Storage** → Get started
-6. Go to Project Settings → Your apps → Add web app → Copy config
+1. **PostgreSQL Database**:
+   - Create a database (e.g., using [Neon.tech](https://neon.tech/)).
+   - Get the connection string.
+2. **NextAuth**:
+   - Generate secure secrets using `openssl rand -base64 32`.
+3. **Google OAuth**:
+   - Go to [Google Cloud Console](https://console.cloud.google.com).
+   - Create OAuth 2.0 Client IDs.
+   - Set the Authorized redirect URI to: `http://localhost:3000/api/auth/callback/google`
+4. **Cloudinary**:
+   - Create a [Cloudinary](https://cloudinary.com/) account.
+   - Get your Cloud Name, API Key, and API Secret.
 
 ### 3. Environment Variables
 
-Copy `.env.example` to `.env.local` and fill in your Firebase config:
+Copy `.env.example` to `.env.local` and fill in your configuration:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Update these values:
-```
-NEXT_PUBLIC_FIREBASE_API_KEY=your_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-NEXT_PUBLIC_ADMIN_EMAILS=your_admin@gmail.com
-NEXT_PUBLIC_UPI_ID=your_upi@id
+Update these values in `.env.local`:
+```env
+# Database
+DATABASE_URL="postgresql://user:password@host.neon.tech/kratos?sslmode=require"
+
+# NextAuth
+NEXTAUTH_SECRET="your_generated_secret"
+NEXTAUTH_URL="http://localhost:3000"
+AUTH_SECRET="your_generated_secret"
+
+# Google OAuth
+GOOGLE_CLIENT_ID="your_google_client_id"
+GOOGLE_CLIENT_SECRET="your_google_client_secret"
+
+# Cloudinary Storage
+CLOUDINARY_CLOUD_NAME="your_cloud_name"
+CLOUDINARY_API_KEY="your_api_key"
+CLOUDINARY_API_SECRET="your_api_secret"
+
+# Application Settings
+NEXT_PUBLIC_ADMIN_EMAILS="your_admin_account@gmail.com"
+NEXT_PUBLIC_UPI_ID="your_upi_id@paytm"
 NEXT_PUBLIC_FEE_PER_PERSON=69
 ```
 
-### 4. Run Locally
+### 4. Database Initialization
+
+Run Prisma to push the schema and generate the client:
+
+```bash
+npx prisma db push
+npx prisma generate
+```
+
+### 5. Run Locally
+
+Start the development server:
 
 ```bash
 npm run dev
@@ -55,16 +87,19 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
-### 5. Admin Access
+### 6. Admin Access & Mock Data
 
-Add your Google account email to `NEXT_PUBLIC_ADMIN_EMAILS` in `.env.local`. Sign in with that Google account to access `/admin`.
+1. Sign in with the Google account corresponding to the email set in `NEXT_PUBLIC_ADMIN_EMAILS`. 
+2. You will automatically receive the `admin` role.
+3. Call `POST /api/seed` or use the Admin Panel to seed the initial events and default configuration settings.
+4. Access the admin dashboard at `/admin`.
 
 ## Deploy to Vercel
 
-1. Push to GitHub
-2. Go to [vercel.com](https://vercel.com) → Import project
-3. Add all env vars from `.env.local`
-4. Deploy
+1. Push the code to GitHub.
+2. Go to [vercel.com](https://vercel.com) → Import project.
+3. Add all environment variables from your `.env.local`.
+4. Deploy the application (Vercel will automatically run `prisma generate` and `npm run build`).
 
 ## Features
 
@@ -73,19 +108,20 @@ Add your Google account email to `NEXT_PUBLIC_ADMIN_EMAILS` in `.env.local`. Sig
 | Home page (hero, countdown, about, events preview, team, contact) | ✅ |
 | Events listing with category filters | ✅ |
 | Schedule (2-day timeline) | ✅ |
-| Google Sign-In auth | ✅ |
+| Authentication (NextAuth Google OAuth) | ✅ |
 | Team creation (6-char code) | ✅ |
 | Join team by code | ✅ |
-| Payment upload (screenshot + txn ID) | ✅ |
-| User dashboard | ✅ |
+| Payment upload directly to Cloudinary | ✅ |
+| User dashboard with ticket status | ✅ |
 | Admin panel (events CRUD, registrations, payment verification) | ✅ |
-| CSV export | ✅ |
+| Secure API Routes with Role-based Access Control | ✅ |
 
 ## Project Structure
 
-```
+```text
 src/
 ├── app/
+│   ├── api/                  # Next.js API Routes (auth, events, teams, etc.)
 │   ├── page.tsx              # Home
 │   ├── events/               # Events listing
 │   ├── schedule/             # 2-day schedule
@@ -97,14 +133,15 @@ src/
 │   ├── home/                 # Home page sections
 │   └── layout/               # Navbar, Footer, ThemeToggle
 ├── contexts/
-│   ├── AuthContext.tsx       # Firebase auth provider
-│   └── SettingsContext.tsx   # Global settings provider
+│   ├── AuthContext.tsx       # NextAuth wrapper and hooks
+│   └── SettingsContext.tsx   # Global settings API fetcher
 └── lib/
-    ├── firebase.ts           # Firebase init
-    ├── firestore.ts          # Firestore CRUD
-    ├── types.ts              # TypeScript types
-    ├── constants.ts          # Dummy data
-    └── utils.ts              # Helpers
+    ├── auth.ts               # NextAuth v5 Configuration
+    ├── prisma.ts             # Prisma Client instance
+    ├── cloudinary.ts         # Cloudinary upload utilities
+    ├── types.ts              # TypeScript models and schemas
+    ├── constants.ts          # Dummy data definitions
+    └── utils.ts              # Helpers (Tailwind class merging, etc.)
 ```
 
 ## Scripts
@@ -112,6 +149,6 @@ src/
 | Command   | Description                    |
 |-----------|--------------------------------|
 | `npm run dev`  | Start development server       |
-| `npm run build`| Production build               |
+| `npm run build`| Production Next.js build       |
 | `npm run start`| Start production server        |
-| `npm run lint` | Run ESLint                     |
+| `npx prisma...`| Run database migrations/schema updates |
