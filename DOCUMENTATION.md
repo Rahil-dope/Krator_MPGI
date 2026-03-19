@@ -16,7 +16,7 @@ KRATOS 2026 is a dynamic, end-to-end event management platform designed specific
 *   **Dynamic CMS (Content Management System):** Adjust registration deadlines, update UPI details (including dynamic QR uploads), and edit event rules/venues without requesting developer deployment.
 
 **Tech Stack Summary:**
-*   **Frontend:** Next.js (App Router), React, Tailwind CSS, shadcn/ui, Lucide Icons.
+*   **Frontend:** Next.js 16 (App Router), React 19, Tailwind CSS v4, next/font, next/image, Lucide Icons, next-themes, react-hot-toast.
 *   **Backend (BaaS):** Firebase (Auth, Firestore, Storage).
 *   **Hosting:** Vercel.
 
@@ -37,7 +37,7 @@ Ensure you have the following installed on your machine before starting:
 Open your terminal and clone the repository:
 ```bash
 git clone <your-github-repo-url>
-cd kratos-2026
+cd KRATOS
 ```
 
 ### C. Install Dependencies
@@ -56,6 +56,9 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID="your_project_id"
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your_project_id.firebasestorage.app"
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="your_sender_id"
 NEXT_PUBLIC_FIREBASE_APP_ID="your_app_id"
+NEXT_PUBLIC_ADMIN_EMAILS="admin@example.com"
+NEXT_PUBLIC_UPI_ID="yourupi@paytm"
+NEXT_PUBLIC_FEE_PER_PERSON="69"
 ```
 *Note: Because this architecture calls Firebase from the client-side, these variables MUST begin with `NEXT_PUBLIC_`.*
 
@@ -91,6 +94,7 @@ npm run dev
     *   `users` - Stores logged-in user profiles.
     *   `events` - Stores the core event information.
     *   `teams` - Stores team registrations and payment stats.
+    *   `registrations` - Links users to teams for event sign-ups.
     *   `settings` - Stores global platform limits and UI toggles.
 
 ### D. Firestore Structure Examples
@@ -137,9 +141,9 @@ npm run dev
 ### E. Setup Firebase Storage
 1.  Navigate to **Build > Storage** and click **Get started**.
 2.  Start in strict mode and choose the identical location to your Firestore database.
-3.  Inside your new bucket, optionally create manual folders:
-    *   `/payments` (for payment proofs)
-    *   `/assets` (for dynamic UPI QR codes)
+3.  The app uses these paths automatically:
+    *   `/payments/{teamId}/` — payment proof screenshots
+    *   `/settings/upiQR` — UPI QR code (uploaded via Admin Settings)
 
 ### F. Firebase Security Rules
 To ensure bad actors cannot manipulate payment statuses or overwrite other users' data, use the following rules.
@@ -154,9 +158,9 @@ service firebase.storage {
       allow create: if request.auth != null; // Anyone can upload their proof
       allow update, delete: if false; // Uploads are permanent to avoid tampering
     }
-    match /assets/{allPaths=**} {
+    match /settings/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null; // Only specific admins should ideally write here
+      allow write: if request.auth != null; // UPI QR uploads from Admin Settings
     }
   }
 }
@@ -182,8 +186,13 @@ service cloud.firestore {
     match /teams/{teamId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null;
-      // Basic rule: Allow update if user is part of team or is admin
       allow update: if request.auth != null; 
+    }
+
+    // Registrations: Auth users can create and read their own
+    match /registrations/{regId} {
+      allow read, create: if request.auth != null;
+      allow update, delete: if false;
     }
     
     // Settings: Global read
@@ -201,7 +210,7 @@ service cloud.firestore {
 ## 4. 🧑💼 ADMIN SETUP GUIDE
 
 **How to make someone an Admin:**
-Currently, the system is designed to allow organizational oversight to anyone trusted. To restrict visibility exclusively to organizers, a developer must evaluate the User's UID against a hardcoded list in `AuthContext` OR verify a custom `role: "admin"` flag inside the `users` document on Firestore.
+Admin access is controlled via `NEXT_PUBLIC_ADMIN_EMAILS` in `.env.local` (comma-separated list of Google account emails). Add your email to this variable and sign in with that Google account to access `/admin`.
 
 **Using the Platform (Non-Technical Staff):**
 1.  **Access the Dashboard:** Go to `yourwebsite.com/admin`. 

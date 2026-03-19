@@ -8,7 +8,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   addDoc,
   serverTimestamp,
   Timestamp,
@@ -257,9 +256,10 @@ export async function getGlobalSettings(): Promise<GlobalSettings | null> {
 }
 
 export async function updateGlobalSettings(settings: Partial<GlobalSettings>) {
-  const filtered: any = { ...settings };
-  if (settings.registrationDeadline) {
-    filtered.registrationDeadline = Timestamp.fromDate(settings.registrationDeadline);
+  const { registrationDeadline, ...rest } = settings;
+  const filtered: Record<string, unknown> = { ...rest };
+  if (registrationDeadline) {
+    filtered.registrationDeadline = Timestamp.fromDate(registrationDeadline);
   }
   return setDoc(doc(db, "settings", "global"), filtered, { merge: true });
 }

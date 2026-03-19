@@ -1,11 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { getAllTeams, getEvents, updatePaymentStatus, markTeamCheckedIn, bulkUpdatePaymentStatus, bulkMarkCheckedIn } from "@/lib/firestore";
 import type { Team, Event } from "@/lib/types";
 import {
-  Users, CheckCircle, XCircle, Clock, Eye, Download, Loader2,
-  ChevronDown, ChevronUp, ExternalLink, Search, ImageIcon
+  Users, CheckCircle, XCircle, Download, Loader2,
+  ChevronDown, ChevronUp, Search, ImageIcon
 } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -363,11 +364,14 @@ export default function AdminRegistrationsPage() {
             >
               <XCircle className="w-8 h-8" />
             </button>
-            <img 
-              src={previewImage} 
-              alt="Payment Proof" 
-              className="max-w-full max-h-[85vh] object-contain rounded-lg border border-border shadow-2xl" 
-            />
+            <div className="relative w-full max-w-3xl h-[85vh]">
+              <Image
+                src={previewImage}
+                alt="Payment Proof"
+                fill
+                className="object-contain rounded-lg border border-border shadow-2xl"
+              />
+            </div>
           </div>
         </div>
       )}

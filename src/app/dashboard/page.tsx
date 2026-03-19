@@ -1,13 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getUserRegistrations, getTeamById, lockTeam, uploadPaymentProof } from "@/lib/firestore";
-import type { Team, Registration } from "@/lib/types";
+import type { Team } from "@/lib/types";
 import {
   LayoutDashboard, Users, Copy, Lock, Upload, CheckCircle,
-  Clock, XCircle, Loader2, ArrowRight, AlertCircle, Share2, ExternalLink
+  Clock, XCircle, Loader2, ArrowRight, Share2, ExternalLink
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -27,10 +27,8 @@ const statusIcons: Record<string, React.ComponentType<{ className?: string }>> =
 };
 
 export default function DashboardPage() {
-  const router = useRouter();
   const { user, loading: authLoading, signInWithGoogle } = useAuth();
   const { settings, loading: settingsLoading } = useSettings();
-  const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [lockingTeam, setLockingTeam] = useState<string | null>(null);
@@ -45,8 +43,6 @@ export default function DashboardPage() {
     const fetchData = async () => {
       try {
         const regs = await getUserRegistrations(user.uid);
-        setRegistrations(regs);
-
         const teamData = await Promise.all(
           regs.map((r) => getTeamById(r.teamId))
         );
@@ -133,7 +129,7 @@ export default function DashboardPage() {
         <div className="glass-card p-6 mb-8">
           <div className="flex items-center gap-4">
             {user.photoURL && (
-              <img src={user.photoURL} alt="" className="w-12 h-12 rounded-full border border-border" />
+              <Image src={user.photoURL} alt="" width={48} height={48} className="w-12 h-12 rounded-full border border-border object-cover" />
             )}
             <div>
               <h2 className="font-semibold text-white">{user.displayName}</h2>
@@ -254,8 +250,8 @@ export default function DashboardPage() {
                           <p className="text-xs text-muted-foreground mt-1">Amount: <span className="text-foreground font-medium">{formatCurrency(getFeePerPerson() * team.members.length)}</span></p>
                         </div>
                         {settings?.upiQR && (
-                          <div className="shrink-0 w-24 h-24 bg-white p-1.5 rounded-xl flex items-center justify-center border-2 border-neon-blue/30 shadow-[0_0_10px_rgba(0,195,255,0.15)]">
-                            <img src={settings.upiQR} alt="UPI QR" className="max-w-full max-h-full object-contain" />
+                          <div className="relative shrink-0 w-24 h-24 bg-white p-1.5 rounded-xl flex items-center justify-center border-2 border-neon-blue/30 shadow-[0_0_10px_rgba(0,195,255,0.15)]">
+                            <Image src={settings.upiQR} alt="UPI QR" fill className="object-contain p-1" />
                           </div>
                         )}
                       </div>

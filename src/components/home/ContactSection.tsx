@@ -21,7 +21,7 @@ export default function ContactSection() {
             background: "rgba(255,230,0,0.1)",
             border: "1px solid rgba(255,230,0,0.3)"
           }}>
-            // Contact Us
+            {`// Contact Us`}
           </div>
           <h2 className="font-heading font-bold text-4xl sm:text-5xl text-white tracking-tight mb-2">
             GET IN <span className="gradient-text-yellow">TOUCH</span>

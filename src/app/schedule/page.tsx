@@ -26,7 +26,7 @@ export default function SchedulePage() {
           <div className="inline-block font-mono text-xs tracking-[0.3em] uppercase mb-3 px-3 py-1 rounded" style={{
             color: "#00f5ff", background: "rgba(0,245,255,0.1)", border: "1px solid rgba(0,245,255,0.3)"
           }}>
-            // Event Timeline
+            {`// Event Timeline`}
           </div>
           <h1 className="font-heading font-bold text-5xl sm:text-6xl text-white tracking-tight">
             <span className="gradient-text">SCHEDULE</span>

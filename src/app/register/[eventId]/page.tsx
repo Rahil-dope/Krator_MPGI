@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,12 +33,12 @@ import toast from "react-hot-toast";
 export default function RegisterPage({
   params,
 }: {
-  params: Promise<{ eventId: string }>;
+  params: { eventId: string };
 }) {
   const router = useRouter();
   const { user, loading: authLoading, signInWithGoogle } = useAuth();
   const { settings, loading: settingsLoading } = useSettings();
-  const [eventId, setEventId] = useState<string>("");
+  const eventId = params.eventId;
   const [step, setStep] = useState(1); // 1: Details, 2: Team Info, 3: Payment
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -66,19 +67,16 @@ export default function RegisterPage({
   const [eventLoading, setEventLoading] = useState(true);
 
   useEffect(() => {
-    params.then((p) => {
-      setEventId(p.eventId);
-      getEvent(p.eventId).then(e => {
-         // Fallback to fetch from DUMMY if id starts with "dummy-" ?
-         // For now, assume it's correctly populated in firestore
-         setEvent(e);
-         setEventLoading(false);
-      }).catch(err => {
-         console.error(err);
-         setEventLoading(false);
+    getEvent(eventId)
+      .then((e) => {
+        setEvent(e);
+        setEventLoading(false);
+      })
+      .catch(() => {
+        setEvent(null);
+        setEventLoading(false);
       });
-    });
-  }, [params]);
+  }, [eventId]);
 
   const fee = getFeePerPerson();
   const regOpen = settings?.registrationOpen ?? false;
@@ -413,8 +411,8 @@ export default function RegisterPage({
                 <p className="text-xs text-muted-foreground mt-1">Total for Team: <span className="text-white font-semibold">{formatCurrency(totalFee)}</span> (max capacity)</p>
               </div>
               {settings?.upiQR && (
-                <div className="shrink-0 w-32 h-32 bg-white p-2 rounded-xl flex items-center justify-center border-2 border-neon-blue/30 shadow-[0_0_15px_rgba(0,195,255,0.2)]">
-                  <img src={settings.upiQR} alt="UPI QR Code" className="w-full h-full object-contain" />
+                <div className="relative shrink-0 w-32 h-32 bg-white p-2 rounded-xl flex items-center justify-center border-2 border-neon-blue/30 shadow-[0_0_15px_rgba(0,195,255,0.2)]">
+                  <Image src={settings.upiQR} alt="UPI QR Code" fill className="object-contain p-2" />
                 </div>
               )}
             </div>

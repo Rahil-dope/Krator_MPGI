@@ -9,7 +9,7 @@ export function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    queueMicrotask(() => setMounted(true));
   }, []);
 
   if (!mounted) return <div className="w-8 h-8 rounded-full" style={{ background: "rgba(155,89,255,0.1)" }} />;

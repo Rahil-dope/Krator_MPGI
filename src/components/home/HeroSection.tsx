@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { ArrowRight, Calendar, MapPin, ChevronRight } from "lucide-react";
-import { useEffect, useRef } from "react";
 
 // Particle / floating hexagon decorations
 const SHAPES = [

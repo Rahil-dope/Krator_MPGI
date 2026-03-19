@@ -20,7 +20,7 @@ export default function AboutSection() {
             background: "rgba(155,89,255,0.1)",
             border: "1px solid rgba(155,89,255,0.3)"
           }}>
-            // About KRATOS
+            {`// About KRATOS`}
           </div>
           <h2 className="font-heading font-bold text-4xl sm:text-5xl text-white tracking-tight mb-4">
             WHERE TALENT{" "}

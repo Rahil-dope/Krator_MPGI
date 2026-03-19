@@ -76,7 +76,7 @@ export default function EventsPage() {
           <div className="inline-block font-mono text-xs tracking-[0.3em] uppercase mb-3 px-3 py-1 rounded" style={{
             color: "#9b59ff", background: "rgba(155,89,255,0.1)", border: "1px solid rgba(155,89,255,0.3)"
           }}>
-            // Select Your Event
+            {`// Select Your Event`}
           </div>
           <h1 className="font-heading font-bold text-5xl sm:text-6xl text-white tracking-tight mb-3">
             <span className="gradient-text">EVENTS</span>

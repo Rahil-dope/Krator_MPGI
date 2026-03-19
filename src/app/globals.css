@@ -72,9 +72,9 @@
   --color-destructive: var(--neon-pink);
 
   /* ── Fonts ────────────────────────────────────── */
-  --font-sans: "Rajdhani", "Inter", system-ui, sans-serif;
-  --font-heading: "Rajdhani", "Space Grotesk", system-ui, sans-serif;
-  --font-mono: "Share Tech Mono", "Fira Code", monospace;
+  --font-sans: var(--font-rajdhani), var(--font-inter), system-ui, sans-serif;
+  --font-heading: var(--font-rajdhani), system-ui, sans-serif;
+  --font-mono: var(--font-share-tech-mono), monospace;
 
   /* ── Animations ───────────────────────────────── */
   --animate-pulse-neon: pulseNeon 2s ease-in-out infinite;

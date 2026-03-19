@@ -25,7 +25,7 @@ export default function CountdownTimer() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    queueMicrotask(() => setMounted(true));
     const id = setInterval(() => setTime(getTimeRemaining()), 1000);
     return () => clearInterval(id);
   }, []);

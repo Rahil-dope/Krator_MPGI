@@ -44,6 +44,7 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 NEXT_PUBLIC_ADMIN_EMAILS=your_admin@gmail.com
 NEXT_PUBLIC_UPI_ID=your_upi@id
+NEXT_PUBLIC_FEE_PER_PERSON=69
 ```
 
 ### 4. Run Locally
@@ -85,22 +86,32 @@ Add your Google account email to `NEXT_PUBLIC_ADMIN_EMAILS` in `.env.local`. Sig
 ```
 src/
 ├── app/
-│   ├── page.tsx          # Home
-│   ├── events/           # Events listing
-│   ├── schedule/         # 2-day schedule
-│   ├── register/[id]/    # Registration wizard
-│   ├── join-team/        # Join team by code
-│   ├── dashboard/        # User dashboard
-│   └── admin/            # Admin panel
+│   ├── page.tsx              # Home
+│   ├── events/               # Events listing
+│   ├── schedule/             # 2-day schedule
+│   ├── register/[eventId]/   # Registration wizard
+│   ├── join-team/            # Join team by code
+│   ├── dashboard/            # User dashboard
+│   └── admin/                # Admin panel
 ├── components/
-│   ├── home/             # Home page sections
-│   └── layout/           # Navbar, Footer
+│   ├── home/                 # Home page sections
+│   └── layout/               # Navbar, Footer, ThemeToggle
 ├── contexts/
-│   └── AuthContext.tsx    # Firebase auth provider
+│   ├── AuthContext.tsx       # Firebase auth provider
+│   └── SettingsContext.tsx   # Global settings provider
 └── lib/
-    ├── firebase.ts       # Firebase init
-    ├── firestore.ts      # Firestore CRUD
-    ├── types.ts          # TypeScript types
-    ├── constants.ts      # Dummy data
-    └── utils.ts          # Helpers
+    ├── firebase.ts           # Firebase init
+    ├── firestore.ts          # Firestore CRUD
+    ├── types.ts              # TypeScript types
+    ├── constants.ts          # Dummy data
+    └── utils.ts              # Helpers
 ```
+
+## Scripts
+
+| Command   | Description                    |
+|-----------|--------------------------------|
+| `npm run dev`  | Start development server       |
+| `npm run build`| Production build               |
+| `npm run start`| Start production server        |
+| `npm run lint` | Run ESLint                     |

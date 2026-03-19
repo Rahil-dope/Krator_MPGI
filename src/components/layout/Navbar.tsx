@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -99,7 +100,7 @@ export default function Navbar() {
                   Dashboard
                 </Link>
                 {user.photoURL && (
-                  <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full" style={{ border: "2px solid rgba(155,89,255,0.5)" }} />
+                  <Image src={user.photoURL} alt="" width={32} height={32} className="w-8 h-8 rounded-full object-cover" style={{ border: "2px solid rgba(155,89,255,0.5)" }} />
                 )}
                 <button onClick={signOut} title="Sign Out" className="p-1.5 rounded transition-all" style={{ color: "rgba(232,224,255,0.5)" }}>
                   <LogOut className="w-4 h-4" />

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { getGlobalSettings, updateGlobalSettings, uploadUpiQR } from "@/lib/firestore";
 import type { GlobalSettings } from "@/lib/types";
-import { Settings, Save, Upload, Loader2, AlertCircle } from "lucide-react";
+import { Settings, Save, Upload, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function AdminSettingsPage() {
@@ -116,9 +116,10 @@ export default function AdminSettingsPage() {
               <div className="flex items-start gap-4">
                 {(qrFile || settings.upiQR) && (
                   <div className="shrink-0 w-24 h-24 rounded-lg overflow-hidden border border-border bg-background flex items-center justify-center">
-                    <img 
-                      src={qrFile ? URL.createObjectURL(qrFile) : settings.upiQR} 
-                      alt="QR Preview" 
+                    {/* eslint-disable-next-line @next/next/no-img-element -- blob URLs from createObjectURL are not supported by next/image */}
+                    <img
+                      src={qrFile ? URL.createObjectURL(qrFile) : settings.upiQR ?? ""}
+                      alt="QR Preview"
                       className="max-w-full max-h-full object-contain"
                     />
                   </div>

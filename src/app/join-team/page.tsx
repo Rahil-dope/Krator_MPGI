@@ -18,7 +18,6 @@ export default function JoinTeamPage() {
   const [eventName, setEventName] = useState("");
   const [searching, setSearching] = useState(false);
   const [joining, setJoining] = useState(false);
-  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
   const [details, setDetails] = useState<TeamMember>({

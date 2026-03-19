@@ -17,7 +17,7 @@ export default function TeamSection() {
             background: "rgba(0,245,255,0.1)",
             border: "1px solid rgba(0,245,255,0.3)"
           }}>
-            // Core Team
+            {`// Core Team`}
           </div>
           <h2 className="font-heading font-bold text-4xl sm:text-5xl text-white tracking-tight">
             THE <span className="gradient-text">SQUAD</span>

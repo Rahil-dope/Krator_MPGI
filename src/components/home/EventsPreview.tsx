@@ -45,7 +45,7 @@ export default function EventsPreview() {
             background: "rgba(255,45,120,0.1)",
             border: "1px solid rgba(255,45,120,0.3)"
           }}>
-            // Featured Events
+            {`// Featured Events`}
           </div>
           <h2 className="font-heading font-bold text-4xl sm:text-5xl text-white tracking-tight mb-4">
             PICK YOUR{" "}
