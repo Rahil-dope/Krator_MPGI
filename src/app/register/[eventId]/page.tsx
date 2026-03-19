@@ -1,15 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  createTeam,
-  getUserEventRegistration,
-  uploadPaymentProof,
-  getEvent,
-} from "@/lib/firestore";
 import {
   formatCurrency,
   getFeePerPerson,
@@ -33,12 +27,12 @@ import toast from "react-hot-toast";
 export default function RegisterPage({
   params,
 }: {
-  params: { eventId: string };
+  params: Promise<{ eventId: string }>;
 }) {
+  const { eventId } = use(params);
   const router = useRouter();
   const { user, loading: authLoading, signInWithGoogle } = useAuth();
   const { settings, loading: settingsLoading } = useSettings();
-  const eventId = params.eventId;
   const [step, setStep] = useState(1); // 1: Details, 2: Team Info, 3: Payment
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -67,9 +61,10 @@ export default function RegisterPage({
   const [eventLoading, setEventLoading] = useState(true);
 
   useEffect(() => {
-    getEvent(eventId)
-      .then((e) => {
-        setEvent(e);
+    fetch(`/api/events/${eventId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        setEvent(data);
         setEventLoading(false);
       })
       .catch(() => {
@@ -84,9 +79,12 @@ export default function RegisterPage({
   // Check if already registered
   useEffect(() => {
     if (user && eventId) {
-      getUserEventRegistration(user.uid, eventId).then((reg) => {
-        if (reg) setAlreadyRegistered(true);
-      }).catch(() => {});
+      fetch(`/api/registrations/check?eventId=${eventId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.registered) setAlreadyRegistered(true);
+        })
+        .catch(() => {});
     }
   }, [user, eventId]);
 
@@ -95,7 +93,7 @@ export default function RegisterPage({
       setMemberDetails((prev) => ({
         ...prev,
         email: user.email || "",
-        name: user.displayName || "",
+        name: user.name || "",
       }));
     }
   }, [user]);
@@ -216,14 +214,21 @@ export default function RegisterPage({
     }
     setIsSubmitting(true);
     try {
-      const team = await createTeam(
-        eventId,
-        event.name,
-        teamName,
-        user.uid,
-        user.email || "",
-        { ...memberDetails, uid: user.uid }
-      );
+      const res = await fetch("/api/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId,
+          eventName: event.name,
+          teamName,
+          memberDetails: { ...memberDetails, uid: user.id },
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to create team");
+      }
+      const team = await res.json();
       setCreatedTeamCode(team.teamCode);
       setCreatedTeamId(team.id);
       toast.success("Team created successfully!");
@@ -246,7 +251,20 @@ export default function RegisterPage({
     }
     setIsSubmitting(true);
     try {
-      await uploadPaymentProof(createdTeamId, paymentFile, transactionId);
+      const formData = new FormData();
+      formData.append("file", paymentFile);
+      formData.append("teamId", createdTeamId);
+      formData.append("transactionId", transactionId);
+      formData.append("type", "payment");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to upload payment");
+      }
       setSuccess(true);
       toast.success("Registration complete!");
     } catch (err: unknown) {

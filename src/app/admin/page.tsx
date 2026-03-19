@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAllTeams, getEvents } from "@/lib/firestore";
 import type { Team, Event } from "@/lib/types";
 import { BarChart3, Users, Clock, CheckCircle, IndianRupee, Loader2, Download } from "lucide-react";
 import { formatCurrency, getFeePerPerson } from "@/lib/utils";
@@ -13,18 +12,21 @@ export default function AdminDashboard() {
   const [selectedEventId, setSelectedEventId] = useState("all");
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchData = async () => {
       try {
-        const [t, e] = await Promise.all([getAllTeams(), getEvents()]);
-        setTeams(t);
-        setEvents(e);
+        const [teamsRes, eventsRes] = await Promise.all([
+          fetch("/api/teams?all=true"),
+          fetch("/api/events"),
+        ]);
+        if (teamsRes.ok) setTeams(await teamsRes.json());
+        if (eventsRes.ok) setEvents(await eventsRes.json());
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
-    fetch();
+    fetchData();
   }, []);
 
   const displayTeams = selectedEventId === "all" ? teams : teams.filter(t => t.eventId === selectedEventId);
@@ -152,7 +154,7 @@ export default function AdminDashboard() {
                 </div>
               );
             }) : (
-              <p className="text-sm text-muted-foreground">No events in Firestore yet. Events use dummy data until seeded.</p>
+              <p className="text-sm text-muted-foreground">No events yet. Use the seed button to populate events.</p>
             )}
           </div>
         </>

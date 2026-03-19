@@ -5,7 +5,6 @@ import Link from "next/link";
 import { getFeePerPerson } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
-import { getEvents } from "@/lib/firestore";
 import type { Event } from "@/lib/types";
 import { Code, Globe, Bug, Cpu, Bot, Gamepad2, Smartphone, Palette, Brain, Users, ArrowRight, Loader2, MapPin, Trophy, UserCircle } from "lucide-react";
 
@@ -36,8 +35,11 @@ export default function EventsPage() {
   useEffect(() => {
     async function load() {
       try {
-        const data = await getEvents();
-        setDbEvents(data.filter(e => e.isActive));
+        const res = await fetch("/api/events");
+        if (res.ok) {
+          const data = await res.json();
+          setDbEvents(data.filter((e: Event) => e.isActive));
+        }
       } catch (err) {
         console.error(err);
       } finally {

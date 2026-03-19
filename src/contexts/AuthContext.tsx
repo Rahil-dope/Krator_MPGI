@@ -1,18 +1,18 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
-import {
-  User,
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut as firebaseSignOut,
-} from "firebase/auth";
-import { auth, googleProvider } from "@/lib/firebase";
-import { createUserProfile } from "@/lib/firestore";
-import { getAdminEmails } from "@/lib/utils";
+import { createContext, useContext } from "react";
+import { SessionProvider, useSession, signIn, signOut } from "next-auth/react";
+
+interface AuthUser {
+  id: string;
+  name: string | null;
+  email: string | null;
+  image: string | null;
+  role: string;
+}
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   loading: boolean;
   isAdmin: boolean;
   signInWithGoogle: () => Promise<void>;
@@ -27,46 +27,34 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
 });
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+function AuthContextProvider({ children }: { children: React.ReactNode }) {
+  const { data: session, status } = useSession();
+  const loading = status === "loading";
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        // Create user profile on first login
-        await createUserProfile(
-          firebaseUser.uid,
-          firebaseUser.displayName || "User",
-          firebaseUser.email || "",
-          firebaseUser.photoURL || undefined
-        );
-        // Check admin status
-        const adminEmails = getAdminEmails();
-        setIsAdmin(adminEmails.includes(firebaseUser.email?.toLowerCase() || ""));
-      } else {
-        setIsAdmin(false);
+  const user: AuthUser | null = session?.user
+    ? {
+        id: session.user.id ?? "",
+        name: session.user.name ?? null,
+        email: session.user.email ?? null,
+        image: session.user.image ?? null,
+        role: (session.user as { role?: string }).role ?? "user",
       }
-      setLoading(false);
-    });
+    : null;
 
-    return () => unsubscribe();
-  }, []);
+  const isAdmin = user?.role === "admin";
 
-  const signInWithGoogle = async () => {
+  const handleSignIn = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      await signIn("google");
     } catch (error) {
       console.error("Sign in error:", error);
       throw error;
     }
   };
 
-  const signOut = async () => {
+  const handleSignOut = async () => {
     try {
-      await firebaseSignOut(auth);
+      await signOut();
     } catch (error) {
       console.error("Sign out error:", error);
       throw error;
@@ -74,9 +62,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, signInWithGoogle, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        isAdmin,
+        signInWithGoogle: handleSignIn,
+        signOut: handleSignOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
+  );
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <SessionProvider>
+      <AuthContextProvider>{children}</AuthContextProvider>
+    </SessionProvider>
   );
 }
 

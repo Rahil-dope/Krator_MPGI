@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUserRegistrations, getTeamById, lockTeam, uploadPaymentProof } from "@/lib/firestore";
 import type { Team } from "@/lib/types";
 import {
   LayoutDashboard, Users, Copy, Lock, Upload, CheckCircle,
@@ -42,11 +41,11 @@ export default function DashboardPage() {
     if (!user) return;
     const fetchData = async () => {
       try {
-        const regs = await getUserRegistrations(user.uid);
-        const teamData = await Promise.all(
-          regs.map((r) => getTeamById(r.teamId))
-        );
-        setTeams(teamData.filter(Boolean) as Team[]);
+        const res = await fetch("/api/teams");
+        if (res.ok) {
+          const data = await res.json();
+          setTeams(data);
+        }
       } catch (err) {
         console.error("Dashboard fetch error:", err);
       } finally {
@@ -59,7 +58,15 @@ export default function DashboardPage() {
   const handleLockTeam = async (teamId: string) => {
     setLockingTeam(teamId);
     try {
-      await lockTeam(teamId);
+      const res = await fetch("/api/teams/lock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Lock error");
+      }
       setTeams((prev) =>
         prev.map((t) => (t.id === teamId ? { ...t, isLocked: true } : t))
       );
@@ -79,7 +86,21 @@ export default function DashboardPage() {
 
     setUploadingPayment(teamId);
     try {
-      const url = await uploadPaymentProof(teamId, file, txnId);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("teamId", teamId);
+      formData.append("transactionId", txnId);
+      formData.append("type", "payment");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Upload error");
+      }
+      const { url } = await res.json();
       setTeams((prev) =>
         prev.map((t) => (t.id === teamId ? { ...t, paymentProofURL: url, transactionId: txnId, paymentStatus: "pending" } : t))
       );
@@ -128,11 +149,11 @@ export default function DashboardPage() {
         {/* Welcome */}
         <div className="glass-card p-6 mb-8">
           <div className="flex items-center gap-4">
-            {user.photoURL && (
-              <Image src={user.photoURL} alt="" width={48} height={48} className="w-12 h-12 rounded-full border border-border object-cover" />
+            {user.image && (
+              <Image src={user.image} alt="" width={48} height={48} className="w-12 h-12 rounded-full border border-border object-cover" />
             )}
             <div>
-              <h2 className="font-semibold text-white">{user.displayName}</h2>
+              <h2 className="font-semibold text-white">{user.name}</h2>
               <p className="text-sm text-muted-foreground">{user.email}</p>
             </div>
           </div>
@@ -177,7 +198,7 @@ export default function DashboardPage() {
           <div className="space-y-4">
             {teams.map((team) => {
               const StatusIcon = statusIcons[team.paymentStatus] || Clock;
-              const isLeader = team.leaderId === user.uid;
+              const isLeader = team.leaderId === user.id;
 
               return (
                 <div key={team.id} className="glass-card p-6">
@@ -228,7 +249,7 @@ export default function DashboardPage() {
                       {team.members.map((m, i) => (
                         <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-background/30">
                           <div>
-                            <span className="text-sm font-medium text-foreground block">{m.name} {m.uid === team.leaderId && <span className="text-[10px] text-neon-purple ml-2 border border-neon-purple/30 bg-neon-purple/10 px-1.5 py-0.5 rounded">LEADER</span>}</span>
+                            <span className="text-sm font-medium text-foreground block">{m.name} {m.userId === team.leaderId && <span className="text-[10px] text-neon-purple ml-2 border border-neon-purple/30 bg-neon-purple/10 px-1.5 py-0.5 rounded">LEADER</span>}</span>
                             <span className="text-xs text-muted-foreground">{m.college}</span>
                           </div>
                           <span className="text-xs font-mono text-muted-foreground">{m.phone}</span>

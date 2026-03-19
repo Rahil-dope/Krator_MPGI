@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getTeamByCode, joinTeam, getEvent, getUserEventRegistration } from "@/lib/firestore";
 import type { Team, TeamMember } from "@/lib/types";
 import { Search, Users, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -32,28 +31,42 @@ export default function JoinTeamPage() {
   const handleSearch = async () => {
     if (!teamCode.trim()) { toast.error("Enter a team code"); return; }
     setSearching(true);
-      try {
-      const found = await getTeamByCode(teamCode.toUpperCase());
-      if (!found) { toast.error("Team not found"); setTeam(null); return; }
-      if (found.isLocked) { toast.error("This team is locked"); setTeam(null); return; }
+    try {
+      const res = await fetch(`/api/teams/by-code/${teamCode.toUpperCase()}`);
+      if (!res.ok) {
+        toast.error("Team not found");
+        setTeam(null);
+        setSearching(false);
+        return;
+      }
+      const found = await res.json();
+      if (found.isLocked) { toast.error("This team is locked"); setTeam(null); setSearching(false); return; }
 
-      const event = await getEvent(found.eventId);
-      if (event && found.members.length >= event.maxTeamSize) {
+      // Check max team size (event is included in the response)
+      if (found.event && found.members.length >= found.event.maxTeamSize) {
         toast.error("Team is full");
         setTeam(null);
+        setSearching(false);
         return;
       }
 
+      // Check if already registered for this event
       if (user) {
-        const existing = await getUserEventRegistration(user.uid, found.eventId);
-        if (existing) { toast.error("You're already registered for this event"); setTeam(null); return; }
+        const checkRes = await fetch(`/api/registrations/check?eventId=${found.eventId}`);
+        const checkData = await checkRes.json();
+        if (checkData.registered) {
+          toast.error("You're already registered for this event");
+          setTeam(null);
+          setSearching(false);
+          return;
+        }
       }
 
       setTeam(found);
       setEventName(found.eventName || "Unknown Event");
       setDetails((d) => ({
         ...d,
-        name: user?.displayName || "",
+        name: user?.name || "",
         email: user?.email || "",
       }));
     } catch (err: unknown) {
@@ -80,7 +93,18 @@ export default function JoinTeamPage() {
     
     setJoining(true);
     try {
-      await joinTeam(team.id, user.uid, { ...details, uid: user.uid });
+      const res = await fetch("/api/teams/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teamId: team.id,
+          memberDetails: { ...details, uid: user.id },
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to join team");
+      }
       setSuccess(true);
       toast.success("Joined team successfully!");
     } catch (err: unknown) {

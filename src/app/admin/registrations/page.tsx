@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { getAllTeams, getEvents, updatePaymentStatus, markTeamCheckedIn, bulkUpdatePaymentStatus, bulkMarkCheckedIn } from "@/lib/firestore";
 import type { Team, Event } from "@/lib/types";
 import {
   Users, CheckCircle, XCircle, Download, Loader2,
@@ -23,7 +22,7 @@ export default function AdminRegistrationsPage() {
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
   const [updatingPayment, setUpdatingPayment] = useState<string | null>(null);
   
-  // New features state
+  // Filter state
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -40,27 +39,36 @@ export default function AdminRegistrationsPage() {
   }, [searchQuery]);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchData = async () => {
       try {
-        const [t, e] = await Promise.all([getAllTeams(), getEvents()]);
-        setTeams(t);
-        setEvents(e);
+        const [teamsRes, eventsRes] = await Promise.all([
+          fetch("/api/teams?all=true"),
+          fetch("/api/events"),
+        ]);
+        if (teamsRes.ok) setTeams(await teamsRes.json());
+        if (eventsRes.ok) setEvents(await eventsRes.json());
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
-    fetch();
+    fetchData();
   }, []);
 
   const handlePaymentUpdate = async (teamId: string, status: "approved" | "rejected") => {
     setUpdatingPayment(teamId);
     try {
-      await updatePaymentStatus(teamId, status);
-      setTeams((prev) =>
-        prev.map((t) => (t.id === teamId ? { ...t, paymentStatus: status } : t))
-      );
+      const res = await fetch(`/api/teams/${teamId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentStatus: status }),
+      });
+      if (res.ok) {
+        setTeams((prev) =>
+          prev.map((t) => (t.id === teamId ? { ...t, paymentStatus: status } : t))
+        );
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -70,8 +78,17 @@ export default function AdminRegistrationsPage() {
 
   const handleCheckInToggle = async (teamId: string, currentStatus: boolean) => {
     try {
-      await markTeamCheckedIn(teamId, !currentStatus);
-      setTeams((prev) => prev.map(t => t.id === teamId ? { ...t, checkedIn: !currentStatus, checkedInAt: !currentStatus ? new Date() : undefined } : t));
+      const res = await fetch(`/api/teams/${teamId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          checkedIn: !currentStatus,
+          checkedInAt: !currentStatus ? new Date().toISOString() : null,
+        }),
+      });
+      if (res.ok) {
+        setTeams((prev) => prev.map(t => t.id === teamId ? { ...t, checkedIn: !currentStatus, checkedInAt: !currentStatus ? new Date() : undefined } : t));
+      }
     } catch (err) {
       console.error(err);
     }
@@ -82,9 +99,15 @@ export default function AdminRegistrationsPage() {
     setBulkActionLoading(true);
     try {
       const ids = Array.from(selectedTeams);
-      await bulkUpdatePaymentStatus(ids, "approved");
-      setTeams((prev) => prev.map(t => ids.includes(t.id) ? { ...t, paymentStatus: "approved" } : t));
-      setSelectedTeams(new Set());
+      const res = await fetch("/api/teams/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamIds: ids, action: "updatePayment", status: "approved" }),
+      });
+      if (res.ok) {
+        setTeams((prev) => prev.map(t => ids.includes(t.id) ? { ...t, paymentStatus: "approved" } : t));
+        setSelectedTeams(new Set());
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -97,9 +120,15 @@ export default function AdminRegistrationsPage() {
     setBulkActionLoading(true);
     try {
       const ids = Array.from(selectedTeams);
-      await bulkMarkCheckedIn(ids, true);
-      setTeams((prev) => prev.map(t => ids.includes(t.id) ? { ...t, checkedIn: true, checkedInAt: new Date() } : t));
-      setSelectedTeams(new Set());
+      const res = await fetch("/api/teams/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamIds: ids, action: "checkIn" }),
+      });
+      if (res.ok) {
+        setTeams((prev) => prev.map(t => ids.includes(t.id) ? { ...t, checkedIn: true, checkedInAt: new Date() } : t));
+        setSelectedTeams(new Set());
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -132,11 +161,8 @@ export default function AdminRegistrationsPage() {
   };
 
   const filteredTeams = teams.filter((t) => {
-    // 1. Event filter
     if (filter !== "all" && t.eventId !== filter) return false;
-    // 2. Payment filter
     if (paymentFilter !== "all" && t.paymentStatus !== paymentFilter) return false;
-    // 3. Search query
     if (debouncedSearch) {
       const q = debouncedSearch.toLowerCase();
       const matchTeamName = t.teamName.toLowerCase().includes(q);
@@ -148,7 +174,6 @@ export default function AdminRegistrationsPage() {
       );
       if (!matchTeamName && !matchTeamCode && !matchMembers) return false;
     }
-    // 4. Attendance filter
     if (attendanceFilter !== "all") {
       if (attendanceFilter === "checkedIn" && !t.checkedIn) return false;
       if (attendanceFilter === "notArrived" && t.checkedIn) return false;
@@ -238,9 +263,7 @@ export default function AdminRegistrationsPage() {
             return (
               <div key={team.id} className="glass-card overflow-hidden">
                 {/* Row */}
-                <div
-                  className="p-4 flex items-center justify-between hover:bg-white/5"
-                >
+                <div className="p-4 flex items-center justify-between hover:bg-white/5">
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <input
                       type="checkbox"

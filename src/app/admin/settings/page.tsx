@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getGlobalSettings, updateGlobalSettings, uploadUpiQR } from "@/lib/firestore";
 import type { GlobalSettings } from "@/lib/types";
 import { Settings, Save, Upload, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -20,8 +19,16 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     async function load() {
       try {
-        const data = await getGlobalSettings();
-        if (data) setSettings(data);
+        const res = await fetch("/api/settings");
+        if (res.ok) {
+          const data = await res.json();
+          setSettings({
+            registrationOpen: data.registrationOpen,
+            registrationDeadline: data.registrationDeadline ? new Date(data.registrationDeadline) : null,
+            upiId: data.upiId || "",
+            upiQR: data.upiQR || "",
+          });
+        }
       } catch (err) {
         console.error(err);
         toast.error("Failed to load settings");
@@ -36,14 +43,48 @@ export default function AdminSettingsPage() {
     setSaving(true);
     try {
       const updates = { ...settings };
+
+      // Upload QR first if selected
       if (qrFile) {
-        const url = await uploadUpiQR(qrFile);
-        updates.upiQR = url;
+        const formData = new FormData();
+        formData.append("file", qrFile);
+        formData.append("type", "upiQR");
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        if (uploadRes.ok) {
+          const { url } = await uploadRes.json();
+          updates.upiQR = url;
+        }
       }
-      await updateGlobalSettings(updates);
-      setSettings(updates);
-      setQrFile(null);
-      toast.success("Settings saved successfully!");
+
+      // Save settings
+      const settingsPayload: Record<string, string | boolean> = {
+        registrationOpen: updates.registrationOpen ?? false,
+        upiId: updates.upiId || "",
+        upiQR: updates.upiQR || "",
+      };
+      if (updates.registrationDeadline) {
+        settingsPayload.registrationDeadline = updates.registrationDeadline instanceof Date
+          ? updates.registrationDeadline.toISOString()
+          : String(updates.registrationDeadline);
+      }
+
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settingsPayload),
+      });
+
+      if (res.ok) {
+        setSettings(updates);
+        setQrFile(null);
+        toast.success("Settings saved successfully!");
+      } else {
+        throw new Error("Failed to save settings");
+      }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to save settings");
     } finally {

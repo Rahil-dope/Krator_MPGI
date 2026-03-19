@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { DUMMY_EVENTS } from "@/lib/constants";
-import { getEvents, createEvent, updateEvent, deleteEvent } from "@/lib/firestore";
 import type { Event } from "@/lib/types";
 import { Plus, Edit2, Trash2, Loader2, Save, X } from "lucide-react";
 
@@ -27,17 +26,22 @@ export default function AdminEventsPage() {
   });
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchEvents = async () => {
       try {
-        const data = await getEvents();
-        setEvents(data.length > 0 ? data : DUMMY_EVENTS.map((e, i) => ({ ...e, id: `dummy-${i}` })));
+        const res = await fetch("/api/events");
+        if (res.ok) {
+          const data = await res.json();
+          setEvents(data.length > 0 ? data : DUMMY_EVENTS.map((e, i) => ({ ...e, id: `dummy-${i}` })));
+        } else {
+          setEvents(DUMMY_EVENTS.map((e, i) => ({ ...e, id: `dummy-${i}` })));
+        }
       } catch {
         setEvents(DUMMY_EVENTS.map((e, i) => ({ ...e, id: `dummy-${i}` })));
       } finally {
         setLoading(false);
       }
     };
-    fetch();
+    fetchEvents();
   }, []);
 
   const handleAdd = async () => {
@@ -47,10 +51,17 @@ export default function AdminEventsPage() {
         ...rest,
         rules: rulesStr.split("\n").map(r => r.trim()).filter(Boolean),
       };
-      const docRef = await createEvent(finalEvent);
-      setEvents([...events, { ...finalEvent, id: docRef.id }]);
-      setShowAdd(false);
-      setNewEvent({ name: "", description: "", category: "tech", minTeamSize: 1, maxTeamSize: 2, isActive: true, prize: "", venue: "", coordinatorName: "", coordinatorPhone: "", rulesStr: "" });
+      const res = await fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(finalEvent),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setEvents([...events, created]);
+        setShowAdd(false);
+        setNewEvent({ name: "", description: "", category: "tech", minTeamSize: 1, maxTeamSize: 2, isActive: true, prize: "", venue: "", coordinatorName: "", coordinatorPhone: "", rulesStr: "" });
+      }
     } catch (err) {
       console.error(err);
     }
@@ -65,7 +76,12 @@ export default function AdminEventsPage() {
       }
       
       if (!id.startsWith("dummy-")) {
-        await updateEvent(id, finalUpdates);
+        const res = await fetch(`/api/events/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(finalUpdates),
+        });
+        if (!res.ok) throw new Error("Update failed");
       }
       setEvents(events.map((e) => (e.id === id ? { ...e, ...finalUpdates } : e)));
       setEditing(null);
@@ -78,7 +94,8 @@ export default function AdminEventsPage() {
     if (!confirm("Delete this event?")) return;
     try {
       if (!id.startsWith("dummy-")) {
-        await deleteEvent(id);
+        const res = await fetch(`/api/events/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Delete failed");
       }
       setEvents(events.filter((e) => e.id !== id));
     } catch (err) {

@@ -99,8 +99,8 @@ export default function Navbar() {
                   <LayoutDashboard className="w-3.5 h-3.5" />
                   Dashboard
                 </Link>
-                {user.photoURL && (
-                  <Image src={user.photoURL} alt="" width={32} height={32} className="w-8 h-8 rounded-full object-cover" style={{ border: "2px solid rgba(155,89,255,0.5)" }} />
+                {user.image && (
+                  <Image src={user.image} alt="" width={32} height={32} className="w-8 h-8 rounded-full object-cover" style={{ border: "2px solid rgba(155,89,255,0.5)" }} />
                 )}
                 <button onClick={signOut} title="Sign Out" className="p-1.5 rounded transition-all" style={{ color: "rgba(232,224,255,0.5)" }}>
                   <LogOut className="w-4 h-4" />

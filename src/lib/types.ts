@@ -1,8 +1,9 @@
 export interface UserProfile {
-  uid: string;
+  id: string;
   name: string;
   email: string;
-  photoURL?: string;
+  image?: string;
+  role?: string;
   createdAt: Date;
 }
 
@@ -14,6 +15,7 @@ export interface Event {
   minTeamSize: number;
   maxTeamSize: number;
   isActive: boolean;
+  feePerPerson?: number;
   icon?: string;
   rules?: string[];
   prize?: string;
@@ -23,7 +25,8 @@ export interface Event {
 }
 
 export interface TeamMember {
-  uid?: string;
+  id?: string;
+  userId?: string;
   name: string;
   college: string;
   branch: string;

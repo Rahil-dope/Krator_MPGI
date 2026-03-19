@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { getGlobalSettings } from "@/lib/firestore";
 import type { GlobalSettings } from "@/lib/types";
 
 interface SettingsContextType {
@@ -21,8 +20,18 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const data = await getGlobalSettings();
-        setSettings(data);
+        const res = await fetch("/api/settings");
+        if (res.ok) {
+          const data = await res.json();
+          setSettings({
+            registrationOpen: data.registrationOpen,
+            registrationDeadline: data.registrationDeadline
+              ? new Date(data.registrationDeadline)
+              : null,
+            upiId: data.upiId || "",
+            upiQR: data.upiQR || "",
+          });
+        }
       } catch (err) {
         console.error("Failed to load global settings", err);
       } finally {
